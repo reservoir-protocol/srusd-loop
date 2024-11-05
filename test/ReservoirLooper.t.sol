@@ -4,14 +4,58 @@ pragma solidity ^0.8.13;
 import {Test, console} from "forge-std/Test.sol";
 import {ReservoirLooper} from "../src/ReservoirLooper.sol";
 
+import {IMorpho, MarketParams} from "../src/interfaces/IMorpho.sol";
+import {ICreditEnforcer} from "../src/interfaces/ICreditEnforcer.sol";
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import "../src/Constants.sol";
+
 contract ReservoirLooperTest is Test {
     ReservoirLooper public looper;
 
+    IMorpho public morpho = IMorpho(MORPHO_ADDRESS);
+
+    MarketParams public marketParams;
+
     function setUp() public {
+        vm.createSelectFork(
+            "https://eth-mainnet.g.alchemy.com/v2/BmZMWxEB3nqmNcsmasttpvp9BW7XZqc4"
+        );
+
         looper = new ReservoirLooper();
+
+        looper.grantRole(looper.MORPHO_ROLE(), MORPHO_ADDRESS);
+
+        // configure CreditEnforcer
+        vm.startPrank(0x4E8a4894275780f571AaD53122e641D9f50Ff04f);
+        ICreditEnforcer(CREDITENFORCER_ADDRESS).setSMDebtMax(type(uint256).max);
+        ICreditEnforcer(CREDITENFORCER_ADDRESS).setAssetRatioMin(0);
+        ICreditEnforcer(CREDITENFORCER_ADDRESS).setEquityRatioMin(0);
+        ICreditEnforcer(CREDITENFORCER_ADDRESS).setLiquidityRatioMin(0);
+        vm.stopPrank();
+
+        marketParams.loanToken = RUSD_ADDRESS;
+        marketParams.collateralToken = SRUSD_ADDRESS;
+        marketParams.oracle = ORACLE_ADDRESS;
+        marketParams.irm = IRM_ADDRESS;
+        marketParams.lltv = LLTV;
+
+        // provide rusd liquiditiy to the market
+        deal(RUSD_ADDRESS, address(1), 1_000_000_000_000e18, true);
+        vm.startPrank(address(1));
+        IERC20(RUSD_ADDRESS).approve(address(morpho), 1_000_000_000_000e18);
+        morpho.supply(marketParams, 1_000_000_000_000e18, 0, address(1), "");
+        vm.stopPrank();
     }
 
     function test_loop() public {
+        deal(SRUSD_ADDRESS, address(this), 1_000e18, true);
+
+        IERC20(SRUSD_ADDRESS).approve(address(looper), 1_000e18);
+
+        looper.loop(1_000e18, 3_000e18, 0.9e18);
+
         assertTrue(true);
     }
 }

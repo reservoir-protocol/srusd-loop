@@ -12,6 +12,14 @@ struct MarketParams {
 }
 
 interface IMorpho {
+    function supply(
+        MarketParams memory marketParams,
+        uint256 assets,
+        uint256 shares,
+        address onBehalf,
+        bytes memory data
+    ) external returns (uint256 assetsSupplied, uint256 sharesSupplied);
+
     function borrow(
         MarketParams memory marketParams,
         uint256 assets,
