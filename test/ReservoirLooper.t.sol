@@ -18,10 +18,10 @@ contract ReservoirLooperTest is Test {
 
     MarketParams public marketParams;
 
-    function setUp() public {
-        vm.createSelectFork(
-            "https://eth-mainnet.g.alchemy.com/v2/BmZMWxEB3nqmNcsmasttpvp9BW7XZqc4"
-        );
+    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
+
+    function setUp() external {
+        vm.createSelectFork(MAINNET_RPC_URL);
 
         looper = new ReservoirLooper();
 
