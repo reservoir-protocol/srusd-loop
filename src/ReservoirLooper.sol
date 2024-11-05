@@ -39,8 +39,6 @@ contract ReservoirLooper is AccessControl {
         marketParams.lltv = LLTV;
     }
 
-    /// @notice Redeems `shares` amount of vault shares and burns them immediately.
-    /// @dev Always making sure any `underlying` tokens received by the vault are burned and not held
     /// @param _initialAmount amount of srUSD that will be supplied to the market initially
     /// @param _targetAmount amount of srUSD that will be supplied to the market at the end of the loop
     /// @param _ltv percentage of rUSD borrowed against the supplied srUSD (1e18 = 100%)
@@ -49,20 +47,16 @@ contract ReservoirLooper is AccessControl {
         uint256 _targetAmount,
         uint256 _ltv
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        console.log("SRUSD BALANCE: ", srUSD.balanceOf(address(this)));
-
         srUSD.transferFrom(msg.sender, address(this), _initialAmount);
 
         srUSD.approve(address(morpho), type(uint256).max);
-
-        console.log("SRUSD BALANCE: ", srUSD.balanceOf(address(this)));
 
         morpho.supplyCollateral(
             marketParams,
             _initialAmount,
             address(this),
             abi.encode(
-                _initialAmount, // amount of srUSD that has been supplied to the market in this loop
+                _initialAmount, // amount of srUSD that has been supplied to the market in this loop so far
                 _targetAmount, // target srUSD amount that should be supplied at the end of the loop
                 _ltv // loan to value ratio
             )
@@ -79,13 +73,6 @@ contract ReservoirLooper is AccessControl {
             uint256 ltv // loan to value ratio
         ) = abi.decode(data, (uint256, uint256, uint256));
 
-        console.log("--------");
-        console.log("assets: ", assets);
-        console.log("currentAmount: ", currentAmount);
-        console.log("targetAmount: ", targetAmount);
-        console.log("ltv: ", ltv);
-        console.log("--------");
-
         // target amount has been reached
         if (currentAmount >= targetAmount) return;
 
@@ -93,7 +80,7 @@ contract ReservoirLooper is AccessControl {
         uint256 rusdToBorrow = (assets * ltv * savingModule.currentPrice()) /
             1e26;
 
-        // if with this rusdToBorrow amount, we will exceed the target amount, we adjust it and use lower ltv
+        // if with this rusdToBorrow amount, we exceed the target amount, we adjust it and use lower ltv
         if (currentAmount + rusdToBorrow > targetAmount) {
             rusdToBorrow = targetAmount - currentAmount;
             if (rusdToBorrow < 1e18) rusdToBorrow = 1e18;
@@ -112,8 +99,6 @@ contract ReservoirLooper is AccessControl {
         creditEnforcer.mintSavingcoin(address(this), rusdToBorrow);
         uint256 srusdToSupply = (rusdToBorrow * 1e8) /
             savingModule.currentPrice();
-
-        console.log("SRUSD BALANCE: ", srUSD.balanceOf(address(this)));
 
         morpho.supplyCollateral(
             marketParams,
