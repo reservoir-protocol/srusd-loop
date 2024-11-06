@@ -1,20 +1,26 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-// interfaces
-import {IMorpho, MarketParams} from "./interfaces/IMorpho.sol";
+// reservoir interfaces
 import {ICreditEnforcer} from "./interfaces/ICreditEnforcer.sol";
 import {ISavingModule} from "./interfaces/ISavingModule.sol";
 
 // constants
 import "./Constants.sol";
 
-// 3rd party libraries
+// open-zeppelin
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+
+// morpho-blue
+import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
+import {IMorpho, Market, Position, MarketParams, Id} from "morpho-blue/src/interfaces/IMorpho.sol";
+
 import {console} from "forge-std/console.sol";
 
 contract ReservoirLooper is AccessControl {
+    using MarketParamsLib for MarketParams;
+
     bytes32 public constant MORPHO_ROLE =
         keccak256(abi.encode("reservoir.looper.morpho"));
 
@@ -27,6 +33,7 @@ contract ReservoirLooper is AccessControl {
     IERC20 public srUSD = IERC20(SRUSD_ADDRESS);
 
     MarketParams public marketParams;
+    Id public immutable MARKET_ID;
 
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -37,54 +44,63 @@ contract ReservoirLooper is AccessControl {
         marketParams.oracle = ORACLE_ADDRESS;
         marketParams.irm = IRM_ADDRESS;
         marketParams.lltv = LLTV;
+
+        MARKET_ID = marketParams.id();
     }
 
-    /// @param _initialAmount amount of srUSD that will be supplied to the market initially
-    /// @param _targetAmount amount of srUSD that will be supplied to the market at the end of the loop
-    /// @param _ltv percentage of rUSD borrowed against the supplied srUSD (1e18 = 100%)
-    function loop(
-        uint256 _initialAmount,
-        uint256 _targetAmount,
-        uint256 _ltv
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        srUSD.transferFrom(msg.sender, address(this), _initialAmount);
+    /******************************************
+     * HIGH LEVEL FUNCTIONS
+     ******************************************/
 
-        srUSD.approve(address(morpho), type(uint256).max);
+    function openPosition(
+        uint256 _initialAmount,
+        uint256 _targetAmount
+    ) external {
+        srUSD.transferFrom(msg.sender, address(this), _initialAmount);
 
         morpho.supplyCollateral(
             marketParams,
-            _initialAmount,
+            _targetAmount,
             address(this),
-            abi.encode(
-                _initialAmount, // amount of srUSD that has been supplied to the market in this loop so far
-                _targetAmount, // target srUSD amount that should be supplied at the end of the loop
-                _ltv // loan to value ratio
-            )
+            abi.encode(_initialAmount)
         );
     }
 
+    function closePosition() external {
+        Position memory position = morpho.position(MARKET_ID, address(this));
+
+        morpho.repay(
+            marketParams,
+            0,
+            position.borrowShares,
+            address(this),
+            abi.encode(position.collateral)
+        );
+
+        uint256 rusdBalance = rUSD.balanceOf(address(this));
+
+        rUSD.approve(SAVINGMODULE_ADDRESS, rusdBalance);
+
+        creditEnforcer.mintSavingcoin(address(this), rusdBalance);
+
+        srUSD.transfer(msg.sender, srUSD.balanceOf(address(this)));
+    }
+
+    /******************************************
+     * MORPHO FUNCTIONS
+     ******************************************/
+
     function onMorphoSupplyCollateral(
-        uint256 assets, // amount of srUSD that has been supplied to the market in the last `supplyCollateral` call
+        uint256 assets,
         bytes calldata data
     ) external onlyRole(MORPHO_ROLE) {
-        (
-            uint256 currentAmount, // amount of srUSD that has been supplied to the market in this loop so far
-            uint256 targetAmount, // target srUSD amount that should be supplied at the end of the loop
-            uint256 ltv // loan to value ratio
-        ) = abi.decode(data, (uint256, uint256, uint256));
+        uint256 initialAmount = abi.decode(data, (uint256));
 
-        // target amount has been reached
-        if (currentAmount >= targetAmount) return;
+        // Amount of srusd to mint to satisfy `supplyCollateral` after the callback
+        uint256 srUSDToMint = assets - initialAmount;
 
-        // calculate rusd to borrow based on the ltv and borrow
-        uint256 rusdToBorrow = (assets * ltv * savingModule.currentPrice()) /
-            1e26;
-
-        // if with this rusdToBorrow amount, we exceed the target amount, we adjust it and use lower ltv
-        if (currentAmount + rusdToBorrow > targetAmount) {
-            rusdToBorrow = targetAmount - currentAmount;
-            if (rusdToBorrow < 1e18) rusdToBorrow = 1e18;
-        }
+        uint256 rusdToBorrow = (srUSDToMint * savingModule.currentPrice()) /
+            1e8;
 
         morpho.borrow(
             marketParams,
@@ -94,21 +110,30 @@ contract ReservoirLooper is AccessControl {
             address(this)
         );
 
-        // swap borrowed rUSD to srUSD
         rUSD.approve(SAVINGMODULE_ADDRESS, rusdToBorrow);
-        creditEnforcer.mintSavingcoin(address(this), rusdToBorrow);
-        uint256 srusdToSupply = (rusdToBorrow * 1e8) /
-            savingModule.currentPrice();
 
-        morpho.supplyCollateral(
+        creditEnforcer.mintSavingcoin(address(this), rusdToBorrow);
+
+        srUSD.approve(address(morpho), assets);
+    }
+
+    function onMorphoRepay(
+        uint256 rusdToRepay,
+        bytes calldata data
+    ) external onlyRole(MORPHO_ROLE) {
+        uint256 srUSDAmount = abi.decode(data, (uint256));
+
+        morpho.withdrawCollateral(
             marketParams,
-            srusdToSupply,
+            srUSDAmount,
             address(this),
-            abi.encode(
-                currentAmount + srusdToSupply, // amount of srUSD that has been supplied to the market in this loop so far
-                targetAmount, // target srUSD amount that should be supplied at the end of the loop
-                ltv // loan to value ratio
-            )
+            address(this)
         );
+
+        uint256 rusdToGet = (srUSDAmount * savingModule.currentPrice()) / 1e8;
+        srUSD.approve(SAVINGMODULE_ADDRESS, srUSDAmount);
+        savingModule.redeem(rusdToGet);
+
+        rUSD.approve(MORPHO_ADDRESS, rusdToRepay);
     }
 }

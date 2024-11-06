@@ -4,14 +4,22 @@ pragma solidity ^0.8.13;
 import {Test, console} from "forge-std/Test.sol";
 import {ReservoirLooper} from "../src/ReservoirLooper.sol";
 
-import {IMorpho, MarketParams} from "../src/interfaces/IMorpho.sol";
+// morpho-blue
+import {IMorpho, MarketParams, Id, Position} from "morpho-blue/src/interfaces/IMorpho.sol";
+import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
+
+// reservoir interfaces
 import {ICreditEnforcer} from "../src/interfaces/ICreditEnforcer.sol";
 
+// openzeppelin
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+// constants
 import "../src/Constants.sol";
 
 contract ReservoirLooperTest is Test {
+    using MarketParamsLib for MarketParams;
+
     ReservoirLooper public looper;
 
     IMorpho public morpho = IMorpho(MORPHO_ADDRESS);
@@ -49,13 +57,66 @@ contract ReservoirLooperTest is Test {
         vm.stopPrank();
     }
 
-    function test_loop() public {
+    function test_open_position() public {
         deal(SRUSD_ADDRESS, address(this), 1_000e18, true);
 
         IERC20(SRUSD_ADDRESS).approve(address(looper), 1_000e18);
 
-        looper.loop(1_000e18, 3_000e18, 0.9e18);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(this)), 1_000e18);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
 
-        assertTrue(true);
+        Position memory position = morpho.position(
+            marketParams.id(),
+            address(looper)
+        );
+
+        assertEq(position.collateral, 0);
+
+        looper.openPosition(1_000e18, 3_000e18);
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(this)), 0);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
+
+        position = morpho.position(marketParams.id(), address(looper));
+
+        assertEq(position.collateral, 3_000e18);
+    }
+
+    function test_close_position() public {
+        deal(SRUSD_ADDRESS, address(this), 1_000e18, true);
+
+        IERC20(SRUSD_ADDRESS).approve(address(looper), 1_000e18);
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+
+        looper.openPosition(1_000e18, 3_000e18);
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+
+        looper.closePosition();
+
+        Position memory position = morpho.position(
+            marketParams.id(),
+            address(looper)
+        );
+
+        assertEq(position.collateral, 0);
+        assertEq(position.supplyShares, 0);
+        assertEq(position.borrowShares, 0);
+
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(this)),
+            1_000e18,
+            1
+        );
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
     }
 }
