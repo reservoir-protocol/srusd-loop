@@ -11,6 +11,7 @@ import "./Constants.sol";
 // open-zeppelin
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // morpho-blue
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
@@ -20,6 +21,7 @@ import {console} from "forge-std/console.sol";
 
 contract ReservoirLooper is AccessControl {
     using MarketParamsLib for MarketParams;
+    using SafeERC20 for IERC20;
 
     bytes32 public constant MORPHO_ROLE =
         keccak256(abi.encode("reservoir.looper.morpho"));
@@ -56,7 +58,7 @@ contract ReservoirLooper is AccessControl {
         uint256 _initialAmount,
         uint256 _targetAmount
     ) external {
-        srUSD.transferFrom(msg.sender, address(this), _initialAmount);
+        srUSD.safeTransferFrom(msg.sender, address(this), _initialAmount);
 
         morpho.supplyCollateral(
             marketParams,
@@ -83,7 +85,7 @@ contract ReservoirLooper is AccessControl {
 
         creditEnforcer.mintSavingcoin(address(this), rusdBalance);
 
-        srUSD.transfer(msg.sender, srUSD.balanceOf(address(this)));
+        srUSD.safeTransfer(msg.sender, srUSD.balanceOf(address(this)));
     }
 
     /******************************************
@@ -135,5 +137,40 @@ contract ReservoirLooper is AccessControl {
         savingModule.redeem(rusdToGet);
 
         rUSD.approve(MORPHO_ADDRESS, rusdToRepay);
+    }
+
+    /******************************************
+     * FUND RECOVERY FUNCTIONS
+     ******************************************/
+
+    function recover(
+        IERC20 token,
+        address to
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        token.safeTransfer(to, token.balanceOf(address(this)));
+    }
+
+    function recover(
+        IERC20 token,
+        address to,
+        uint256 amount
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        token.safeTransfer(to, amount);
+    }
+
+    function recoverETH(
+        address payable to,
+        uint256 amount
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(amount <= address(this).balance, "Insufficient balance");
+        to.transfer(amount);
+    }
+
+    function approve(
+        IERC20 token,
+        address to,
+        uint256 amount
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        token.approve(to, amount);
     }
 }
