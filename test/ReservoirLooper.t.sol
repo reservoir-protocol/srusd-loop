@@ -14,8 +14,10 @@ import {ICreditEnforcer} from "../src/interfaces/ICreditEnforcer.sol";
 // openzeppelin
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// constants
+// libraries
 import "../src/libraries/ConstantsLib.sol";
+import "../src/libraries/EventsLib.sol";
+import "../src/libraries/ErrorsLib.sol";
 
 contract ReservoirLooperTest is Test {
     using MarketParamsLib for MarketParams;
@@ -58,13 +60,16 @@ contract ReservoirLooperTest is Test {
     }
 
     function test_open_position() public {
+        uint256 initialAmount = 1_000e18;
+        uint256 targetAmount = 3_000e18;
+
         looper.grantRole(looper.WHITELIST(), address(this));
 
-        deal(SRUSD_ADDRESS, address(this), 1_000e18, true);
+        deal(SRUSD_ADDRESS, address(this), initialAmount, true);
 
-        IERC20(SRUSD_ADDRESS).approve(address(looper), 1_000e18);
+        IERC20(SRUSD_ADDRESS).approve(address(looper), initialAmount);
 
-        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(this)), 1_000e18);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(this)), initialAmount);
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
@@ -78,7 +83,14 @@ contract ReservoirLooperTest is Test {
 
         morpho.setAuthorization(address(looper), true);
 
-        looper.openPosition(1_000e18, 3_000e18);
+        vm.expectEmit(true, true, true, true);
+        emit EventsLib.OpenPosition(
+            address(this),
+            initialAmount,
+            targetAmount,
+            block.timestamp
+        );
+        looper.openPosition(initialAmount, targetAmount);
 
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(this)), 0);
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
@@ -91,26 +103,31 @@ contract ReservoirLooperTest is Test {
 
         position = morpho.position(marketParams.id(), address(this));
 
-        assertEq(position.collateral, 3_000e18);
+        assertEq(position.collateral, targetAmount);
     }
 
     function test_close_position() public {
+        uint256 initialAmount = 1_000e18;
+        uint256 targetAmount = 3_000e18;
+
         looper.grantRole(looper.WHITELIST(), address(this));
 
-        deal(SRUSD_ADDRESS, address(this), 1_000e18, true);
+        deal(SRUSD_ADDRESS, address(this), initialAmount, true);
 
-        IERC20(SRUSD_ADDRESS).approve(address(looper), 1_000e18);
+        IERC20(SRUSD_ADDRESS).approve(address(looper), initialAmount);
 
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
 
         morpho.setAuthorization(address(looper), true);
 
-        looper.openPosition(1_000e18, 3_000e18);
+        looper.openPosition(initialAmount, targetAmount);
 
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
 
+        vm.expectEmit(true, true, true, true);
+        emit EventsLib.ClosePosition(address(this), block.timestamp);
         looper.closePosition();
 
         Position memory position = morpho.position(
@@ -130,11 +147,63 @@ contract ReservoirLooperTest is Test {
 
         assertApproxEqAbs(
             IERC20(SRUSD_ADDRESS).balanceOf(address(this)),
-            1_000e18,
+            initialAmount,
             1
         );
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
     }
+
+    // function testFuzz_open_position(
+    //     uint256 initialAmount,
+    //     uint8 leverage
+    // ) public {
+    //     vm.assume(initialAmount >= 1e18 && initialAmount < 1_000_000_000e18);
+    //     vm.assume(leverage > 1 && leverage <= 10);
+
+    //     uint256 targetAmount = initialAmount * leverage;
+
+    //     looper.grantRole(looper.WHITELIST(), address(this));
+
+    //     deal(SRUSD_ADDRESS, address(this), initialAmount, true);
+
+    //     IERC20(SRUSD_ADDRESS).approve(address(looper), initialAmount);
+
+    //     assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(this)), initialAmount);
+    //     assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+    //     assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+    //     assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
+
+    //     Position memory position = morpho.position(
+    //         marketParams.id(),
+    //         address(looper)
+    //     );
+
+    //     assertEq(position.collateral, 0);
+
+    //     morpho.setAuthorization(address(looper), true);
+
+    //     vm.expectEmit(true, true, true, true);
+    //     emit EventsLib.OpenPosition(
+    //         address(this),
+    //         initialAmount,
+    //         targetAmount,
+    //         block.timestamp
+    //     );
+    //     looper.openPosition(initialAmount, targetAmount);
+
+    //     assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(this)), 0);
+    //     assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+    //     assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+    //     assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
+
+    //     position = morpho.position(marketParams.id(), address(looper));
+
+    //     assertEq(position.collateral, 0);
+
+    //     position = morpho.position(marketParams.id(), address(this));
+
+    //     assertEq(position.collateral, targetAmount);
+    // }
 }
