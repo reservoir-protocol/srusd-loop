@@ -25,10 +25,8 @@ contract ReservoirLooper is AccessControl {
     using MarketParamsLib for MarketParams;
     using SafeERC20 for IERC20;
 
-    bytes32 public constant MORPHO_ROLE =
-        keccak256(abi.encode("reservoir.looper.morpho"));
-    bytes32 public constant WHITELIST =
-        keccak256(abi.encode("reservoir.looper.whitelist"));
+    bytes32 public constant MORPHO_ROLE = keccak256("MORPHO_ROLE");
+    bytes32 public constant WHITELIST = keccak256("WHITELSIT_ROLE");
 
     IMorpho public morpho = IMorpho(MORPHO_ADDRESS);
     ICreditEnforcer public creditEnforcer =
