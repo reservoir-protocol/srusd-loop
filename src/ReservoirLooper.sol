@@ -98,8 +98,7 @@ contract ReservoirLooper is AccessControl {
         // Amount of srusd to mint to satisfy `supplyCollateral` after the callback
         uint256 srUSDToMint = assets - initialAmount;
 
-        uint256 rusdToBorrow = (srUSDToMint * savingModule.currentPrice()) /
-            1e8;
+        uint256 rusdToBorrow = previewToRUSD(srUSDToMint);
 
         morpho.borrow(marketParams, rusdToBorrow, 0, user, address(this));
 
@@ -126,7 +125,7 @@ contract ReservoirLooper is AccessControl {
             address(this)
         );
 
-        uint256 rusdToGet = (srUSDAmount * savingModule.currentPrice()) / 1e8;
+        uint256 rusdToGet = previewToRUSD(srUSDAmount);
         srUSD.approve(SAVINGMODULE_ADDRESS, srUSDAmount);
         savingModule.redeem(rusdToGet);
 
@@ -134,8 +133,7 @@ contract ReservoirLooper is AccessControl {
 
         rUSD.approve(SAVINGMODULE_ADDRESS, rusdToSendToUser);
 
-        uint256 srusdAmountToSend = (rusdToSendToUser * 1e8) /
-            savingModule.currentPrice();
+        uint256 srusdAmountToSend = previewToSrUSD(rusdToSendToUser);
 
         creditEnforcer.mintSavingcoin(address(this), rusdToSendToUser);
 
@@ -177,5 +175,21 @@ contract ReservoirLooper is AccessControl {
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         token.approve(to, amount);
+    }
+
+    /******************************************
+     * PREVIEW PRICE FUNCTIONS
+     ******************************************/
+
+    function previewToSrUSD(
+        uint256 _rusdAmount
+    ) public view returns (uint256 _srusdAmount) {
+        _srusdAmount = (_rusdAmount * 1e8) / savingModule.currentPrice();
+    }
+
+    function previewToRUSD(
+        uint256 _srusdAmount
+    ) public view returns (uint256 _rusdAmount) {
+        _rusdAmount = (_srusdAmount * savingModule.currentPrice()) / 1e8;
     }
 }
