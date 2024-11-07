@@ -58,6 +58,8 @@ contract ReservoirLooperTest is Test {
     }
 
     function test_open_position() public {
+        looper.grantRole(looper.WHITELIST(), address(this));
+
         deal(SRUSD_ADDRESS, address(this), 1_000e18, true);
 
         IERC20(SRUSD_ADDRESS).approve(address(looper), 1_000e18);
@@ -74,6 +76,8 @@ contract ReservoirLooperTest is Test {
 
         assertEq(position.collateral, 0);
 
+        morpho.setAuthorization(address(looper), true);
+
         looper.openPosition(1_000e18, 3_000e18);
 
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(this)), 0);
@@ -83,16 +87,24 @@ contract ReservoirLooperTest is Test {
 
         position = morpho.position(marketParams.id(), address(looper));
 
+        assertEq(position.collateral, 0);
+
+        position = morpho.position(marketParams.id(), address(this));
+
         assertEq(position.collateral, 3_000e18);
     }
 
     function test_close_position() public {
+        looper.grantRole(looper.WHITELIST(), address(this));
+
         deal(SRUSD_ADDRESS, address(this), 1_000e18, true);
 
         IERC20(SRUSD_ADDRESS).approve(address(looper), 1_000e18);
 
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+
+        morpho.setAuthorization(address(looper), true);
 
         looper.openPosition(1_000e18, 3_000e18);
 
@@ -105,6 +117,12 @@ contract ReservoirLooperTest is Test {
             marketParams.id(),
             address(looper)
         );
+
+        assertEq(position.collateral, 0);
+        assertEq(position.supplyShares, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(this));
 
         assertEq(position.collateral, 0);
         assertEq(position.supplyShares, 0);

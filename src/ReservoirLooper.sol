@@ -25,6 +25,8 @@ contract ReservoirLooper is AccessControl {
 
     bytes32 public constant MORPHO_ROLE =
         keccak256(abi.encode("reservoir.looper.morpho"));
+    bytes32 public constant WHITELIST =
+        keccak256(abi.encode("reservoir.looper.whitelist"));
 
     IMorpho public morpho = IMorpho(MORPHO_ADDRESS);
     ICreditEnforcer public creditEnforcer =
@@ -57,35 +59,27 @@ contract ReservoirLooper is AccessControl {
     function openPosition(
         uint256 _initialAmount,
         uint256 _targetAmount
-    ) external {
+    ) external onlyRole(WHITELIST) {
         srUSD.safeTransferFrom(msg.sender, address(this), _initialAmount);
 
         morpho.supplyCollateral(
             marketParams,
             _targetAmount,
-            address(this),
-            abi.encode(_initialAmount)
+            msg.sender,
+            abi.encode(msg.sender, _initialAmount)
         );
     }
 
-    function closePosition() external {
-        Position memory position = morpho.position(MARKET_ID, address(this));
+    function closePosition() external onlyRole(WHITELIST) {
+        Position memory position = morpho.position(MARKET_ID, msg.sender);
 
         morpho.repay(
             marketParams,
             0,
             position.borrowShares,
-            address(this),
-            abi.encode(position.collateral)
+            msg.sender,
+            abi.encode(msg.sender, position.collateral)
         );
-
-        uint256 rusdBalance = rUSD.balanceOf(address(this));
-
-        rUSD.approve(SAVINGMODULE_ADDRESS, rusdBalance);
-
-        creditEnforcer.mintSavingcoin(address(this), rusdBalance);
-
-        srUSD.safeTransfer(msg.sender, srUSD.balanceOf(address(this)));
     }
 
     /******************************************
@@ -96,7 +90,10 @@ contract ReservoirLooper is AccessControl {
         uint256 assets,
         bytes calldata data
     ) external onlyRole(MORPHO_ROLE) {
-        uint256 initialAmount = abi.decode(data, (uint256));
+        (address user, uint256 initialAmount) = abi.decode(
+            data,
+            (address, uint256)
+        );
 
         // Amount of srusd to mint to satisfy `supplyCollateral` after the callback
         uint256 srUSDToMint = assets - initialAmount;
@@ -104,13 +101,7 @@ contract ReservoirLooper is AccessControl {
         uint256 rusdToBorrow = (srUSDToMint * savingModule.currentPrice()) /
             1e8;
 
-        morpho.borrow(
-            marketParams,
-            rusdToBorrow,
-            0,
-            address(this),
-            address(this)
-        );
+        morpho.borrow(marketParams, rusdToBorrow, 0, user, address(this));
 
         rUSD.approve(SAVINGMODULE_ADDRESS, rusdToBorrow);
 
@@ -123,18 +114,32 @@ contract ReservoirLooper is AccessControl {
         uint256 rusdToRepay,
         bytes calldata data
     ) external onlyRole(MORPHO_ROLE) {
-        uint256 srUSDAmount = abi.decode(data, (uint256));
+        (address user, uint256 srUSDAmount) = abi.decode(
+            data,
+            (address, uint256)
+        );
 
         morpho.withdrawCollateral(
             marketParams,
             srUSDAmount,
-            address(this),
+            user,
             address(this)
         );
 
         uint256 rusdToGet = (srUSDAmount * savingModule.currentPrice()) / 1e8;
         srUSD.approve(SAVINGMODULE_ADDRESS, srUSDAmount);
         savingModule.redeem(rusdToGet);
+
+        uint256 rusdToSendToUser = rusdToGet - rusdToRepay;
+
+        rUSD.approve(SAVINGMODULE_ADDRESS, rusdToSendToUser);
+
+        uint256 srusdAmountToSend = (rusdToSendToUser * 1e8) /
+            savingModule.currentPrice();
+
+        creditEnforcer.mintSavingcoin(address(this), rusdToSendToUser);
+
+        srUSD.safeTransfer(user, srusdAmountToSend);
 
         rUSD.approve(MORPHO_ADDRESS, rusdToRepay);
     }
