@@ -15,7 +15,7 @@ import {ICreditEnforcer} from "../src/interfaces/ICreditEnforcer.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // constants
-import "../src/Constants.sol";
+import "../src/libraries/ConstantsLib.sol";
 
 contract ReservoirLooperTest is Test {
     using MarketParamsLib for MarketParams;

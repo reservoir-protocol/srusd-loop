@@ -5,8 +5,10 @@ pragma solidity ^0.8.13;
 import {ICreditEnforcer} from "./interfaces/ICreditEnforcer.sol";
 import {ISavingModule} from "./interfaces/ISavingModule.sol";
 
-// constants
-import "./Constants.sol";
+// libraries
+import "./libraries/ConstantsLib.sol";
+import "./libraries/ErrorsLib.sol";
+import "./libraries/EventsLib.sol";
 
 // open-zeppelin
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -68,6 +70,13 @@ contract ReservoirLooper is AccessControl {
             msg.sender,
             abi.encode(msg.sender, _initialAmount)
         );
+
+        emit EventsLib.OpenPosition(
+            msg.sender,
+            _initialAmount,
+            _targetAmount,
+            block.timestamp
+        );
     }
 
     function closePosition() external onlyRole(WHITELIST) {
@@ -80,6 +89,8 @@ contract ReservoirLooper is AccessControl {
             msg.sender,
             abi.encode(msg.sender, position.collateral)
         );
+
+        emit EventsLib.ClosePosition(msg.sender, block.timestamp);
     }
 
     /******************************************
@@ -165,7 +176,10 @@ contract ReservoirLooper is AccessControl {
         address payable to,
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(amount <= address(this).balance, "Insufficient balance");
+        require(
+            amount <= address(this).balance,
+            ErrorsLib.INSUFFICIENT_ETH_BALANCE
+        );
         to.transfer(amount);
     }
 
