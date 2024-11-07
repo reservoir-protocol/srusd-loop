@@ -92,7 +92,7 @@ contract ReservoirLooper is AccessControl {
     }
 
     /******************************************
-     * MORPHO FUNCTIONS
+     * MORPHO CALLBACKS
      ******************************************/
 
     function onMorphoSupplyCollateral(
@@ -198,7 +198,7 @@ contract ReservoirLooper is AccessControl {
     }
 
     /******************************************
-     *
+     * INTERNAL FUNCTIONS
      ******************************************/
 
     function _mintSrUSD(
