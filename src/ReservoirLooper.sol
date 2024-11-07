@@ -111,9 +111,7 @@ contract ReservoirLooper is AccessControl {
 
         morpho.borrow(marketParams, rusdToBorrow, 0, user, address(this));
 
-        rUSD.approve(SAVINGMODULE_ADDRESS, rusdToBorrow);
-
-        creditEnforcer.mintSavingcoin(address(this), rusdToBorrow);
+        _mintSrUSD(rusdToBorrow);
 
         srUSD.approve(address(morpho), assets);
     }
@@ -134,17 +132,11 @@ contract ReservoirLooper is AccessControl {
             address(this)
         );
 
-        uint256 rusdToGet = previewToRUSD(srUSDAmount);
-        srUSD.approve(SAVINGMODULE_ADDRESS, srUSDAmount);
-        savingModule.redeem(rusdToGet);
+        uint256 rusdToGet = _mintRUSD(srUSDAmount);
 
         uint256 rusdToSendToUser = rusdToGet - rusdToRepay;
 
-        rUSD.approve(SAVINGMODULE_ADDRESS, rusdToSendToUser);
-
-        uint256 srusdAmountToSend = previewToSrUSD(rusdToSendToUser);
-
-        creditEnforcer.mintSavingcoin(address(this), rusdToSendToUser);
+        uint256 srusdAmountToSend = _mintSrUSD(rusdToSendToUser);
 
         srUSD.safeTransfer(user, srusdAmountToSend);
 
@@ -203,5 +195,29 @@ contract ReservoirLooper is AccessControl {
         uint256 _srusdAmount
     ) public view returns (uint256 _rusdAmount) {
         _rusdAmount = (_srusdAmount * savingModule.currentPrice()) / 1e8;
+    }
+
+    /******************************************
+     *
+     ******************************************/
+
+    function _mintSrUSD(
+        uint256 _rusdAmount
+    ) internal returns (uint256 _srusdAmount) {
+        rUSD.approve(SAVINGMODULE_ADDRESS, _rusdAmount);
+
+        _srusdAmount = previewToSrUSD(_rusdAmount);
+
+        creditEnforcer.mintSavingcoin(address(this), _rusdAmount);
+    }
+
+    function _mintRUSD(
+        uint256 _srusdAmount
+    ) internal returns (uint256 _rusdAmount) {
+        srUSD.approve(SAVINGMODULE_ADDRESS, _srusdAmount);
+
+        _rusdAmount = previewToRUSD(_srusdAmount);
+
+        savingModule.redeem(_rusdAmount);
     }
 }
