@@ -29,6 +29,12 @@ jobs:
         run: |
           forge --version
 
+      - name: Set up environment variables
+        env:
+          MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
+        run: |
+          echo "Environment variables set."
+
       - name: Run Forge build
         run: |
           forge build --sizes
