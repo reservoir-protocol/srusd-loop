@@ -1,9 +1,6 @@
-name: CI
+name: Build
 
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
+on: push
 
 env:
   FOUNDRY_PROFILE: ci
@@ -13,8 +10,11 @@ jobs:
     strategy:
       fail-fast: true
 
-    name: Foundry project
+    name: Unit Tests
     runs-on: ubuntu-latest
+    environment: test
+    env:
+      MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,22 +25,18 @@ jobs:
         with:
           version: nightly
 
-      - name: Show Forge version
-        run: |
-          forge --version
-
-      - name: Set up environment variables
-        env:
-          MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
-        run: |
-          echo "Environment variables set."
-
       - name: Run Forge build
         run: |
+          forge --version
           forge build --sizes
         id: build
-
       - name: Run Forge tests
         run: |
+          cp .env.template .env
           forge test -vvv
-        id: test
+        id: testrun
+
+      - name: Snapshot Forge Gas in tests
+        run: |
+          forge snapshot
+        id: snapshot
