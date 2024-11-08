@@ -404,4 +404,51 @@ contract PositionsTest is TestSetup {
         assertEq(position.collateral, 0);
         assertEq(position.borrowShares, 0);
     }
+
+    function test_open_position_twice_and_close() public {
+        deal(SRUSD_ADDRESS, address(this), 1_000_000e18, true);
+
+        looper.openPosition(200_000e18, 1_400_000e18);
+
+        looper.openPosition(800_000e18, 3_000_000e18);
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(this)), 0);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
+
+        Position memory position = morpho.position(
+            marketParams.id(),
+            address(looper)
+        );
+
+        assertEq(position.collateral, 0);
+
+        position = morpho.position(marketParams.id(), address(this));
+
+        assertEq(position.collateral, 1_400_000e18 + 3_000_000e18);
+
+        looper.closePosition();
+
+        position = morpho.position(marketParams.id(), address(looper));
+
+        assertEq(position.collateral, 0);
+        assertEq(position.supplyShares, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(this));
+
+        assertEq(position.collateral, 0);
+        assertEq(position.supplyShares, 0);
+        assertEq(position.borrowShares, 0);
+
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(this)),
+            1_000_000e18,
+            1
+        );
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+    }
 }
