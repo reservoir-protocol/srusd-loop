@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {IReservoirLooper} from "./interfaces/IReservoirLooper.sol";
+
 // reservoir interfaces
 import {ICreditEnforcer} from "./interfaces/ICreditEnforcer.sol";
 import {ISavingModule} from "./interfaces/ISavingModule.sol";
 
 // libraries
 import "./libraries/ConstantsLib.sol";
-import "./libraries/ErrorsLib.sol";
-import "./libraries/EventsLib.sol";
+import {ErrorsLib} from "./libraries/ErrorsLib.sol";
+import {EventsLib} from "./libraries/EventsLib.sol";
 
 // open-zeppelin
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -19,29 +21,31 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {IMorpho, Market, Position, MarketParams, Id} from "morpho-blue/src/interfaces/IMorpho.sol";
 
-import {console} from "forge-std/console.sol";
-
-contract ReservoirLooper is AccessControl {
+contract ReservoirLooper is IReservoirLooper, AccessControl {
     using MarketParamsLib for MarketParams;
     using SafeERC20 for IERC20;
 
+    // --- Roles --- //
     bytes32 public constant MORPHO_ROLE = keccak256("MORPHO_ROLE");
     bytes32 public constant WHITELIST = keccak256("WHITELSIT_ROLE");
 
+    // --- External Contracts --- //
     IMorpho public morpho = IMorpho(MORPHO_ADDRESS);
     ICreditEnforcer public creditEnforcer =
         ICreditEnforcer(CREDITENFORCER_ADDRESS);
     ISavingModule public savingModule = ISavingModule(SAVINGMODULE_ADDRESS);
-
     IERC20 public rUSD = IERC20(RUSD_ADDRESS);
     IERC20 public srUSD = IERC20(SRUSD_ADDRESS);
 
+    // --- Morpho Market Info --- //
     MarketParams public marketParams;
     Id public immutable MARKET_ID;
 
+    // --- CONSTRUCTOR --- //
+
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(MORPHO_ROLE, address(morpho));
+        _grantRole(MORPHO_ROLE, MORPHO_ADDRESS);
 
         marketParams.loanToken = RUSD_ADDRESS;
         marketParams.collateralToken = SRUSD_ADDRESS;
@@ -56,6 +60,7 @@ contract ReservoirLooper is AccessControl {
      * HIGH LEVEL FUNCTIONS
      ******************************************/
 
+    /// @inheritdoc IReservoirLooper
     function openPosition(
         uint256 _initialAmount,
         uint256 _targetAmount
@@ -77,6 +82,7 @@ contract ReservoirLooper is AccessControl {
         );
     }
 
+    /// @inheritdoc IReservoirLooper
     function closePosition() external onlyRole(WHITELIST) {
         Position memory position = morpho.position(MARKET_ID, msg.sender);
 
@@ -95,6 +101,7 @@ contract ReservoirLooper is AccessControl {
      * MORPHO CALLBACKS
      ******************************************/
 
+    /// @dev Callback function for Morpho's `supplyCollateral`
     function onMorphoSupplyCollateral(
         uint256 assets,
         bytes calldata data
@@ -116,6 +123,7 @@ contract ReservoirLooper is AccessControl {
         srUSD.approve(address(morpho), assets);
     }
 
+    /// @dev Callback function for Morpho's `repay`
     function onMorphoRepay(
         uint256 rusdToRepay,
         bytes calldata data
@@ -185,12 +193,14 @@ contract ReservoirLooper is AccessControl {
      * PREVIEW PRICE FUNCTIONS
      ******************************************/
 
+    /// @inheritdoc IReservoirLooper
     function previewToSrUSD(
         uint256 _rusdAmount
     ) public view returns (uint256 _srusdAmount) {
         _srusdAmount = (_rusdAmount * 1e8) / savingModule.currentPrice();
     }
 
+    /// @inheritdoc IReservoirLooper
     function previewToRUSD(
         uint256 _srusdAmount
     ) public view returns (uint256 _rusdAmount) {
