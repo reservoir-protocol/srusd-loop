@@ -211,4 +211,197 @@ contract PositionsTest is TestSetup {
         vm.expectRevert("inconsistent input");
         looper.closePosition();
     }
+
+    function test_multiple_positions() public {
+        looper.grantRole(looper.WHITELIST(), address(1));
+        looper.grantRole(looper.WHITELIST(), address(2));
+        looper.grantRole(looper.WHITELIST(), address(3));
+
+        vm.startPrank(address(1));
+        morpho.setAuthorization(address(looper), true);
+        IERC20(SRUSD_ADDRESS).approve(address(looper), type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(address(2));
+        morpho.setAuthorization(address(looper), true);
+        IERC20(SRUSD_ADDRESS).approve(address(looper), type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(address(3));
+        morpho.setAuthorization(address(looper), true);
+        IERC20(SRUSD_ADDRESS).approve(address(looper), type(uint256).max);
+        vm.stopPrank();
+
+        deal(SRUSD_ADDRESS, address(1), 1_000_000e18, true);
+        deal(SRUSD_ADDRESS, address(2), 1_000_000e18, true);
+        deal(SRUSD_ADDRESS, address(3), 1_000_000e18, true);
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(1)), 1_000_000e18);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(2)), 1_000_000e18);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(3)), 1_000_000e18);
+
+        Position memory position = morpho.position(
+            marketParams.id(),
+            address(looper)
+        );
+
+        assertEq(position.collateral, 0);
+
+        vm.prank(address(1));
+        looper.openPosition(400_000e18, 2_000_000e18);
+
+        vm.prank(address(2));
+        looper.openPosition(1_000_000e18, 20_000_000e18);
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(1)), 600_000e18);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(2)), 0);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(3)), 1_000_000e18);
+
+        position = morpho.position(marketParams.id(), address(looper));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(1));
+        assertEq(position.collateral, 2_000_000e18);
+        assertTrue(position.borrowShares > 0);
+
+        position = morpho.position(marketParams.id(), address(2));
+        assertEq(position.collateral, 20_000_000e18);
+        assertTrue(position.borrowShares > 0);
+
+        position = morpho.position(marketParams.id(), address(3));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        vm.prank(address(1));
+        looper.closePosition();
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(1)),
+            1_000_000e18,
+            1
+        );
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(2)), 0);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(3)), 1_000_000e18);
+
+        position = morpho.position(marketParams.id(), address(looper));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(1));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(2));
+        assertEq(position.collateral, 20_000_000e18);
+        assertTrue(position.borrowShares > 0);
+
+        position = morpho.position(marketParams.id(), address(3));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        vm.prank(address(3));
+        looper.openPosition(900_000e18, 36_000_000e18);
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(1)),
+            1_000_000e18,
+            1
+        );
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(2)), 0);
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(3)), 100_000e18);
+
+        position = morpho.position(marketParams.id(), address(looper));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(1));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(2));
+        assertEq(position.collateral, 20_000_000e18);
+        assertTrue(position.borrowShares > 0);
+
+        position = morpho.position(marketParams.id(), address(3));
+        assertEq(position.collateral, 36_000_000e18);
+        assertTrue(position.borrowShares > 0);
+
+        vm.prank(address(2));
+        looper.closePosition();
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(1)),
+            1_000_000e18,
+            1
+        );
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(2)),
+            1_000_000e18,
+            1
+        );
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(3)), 100_000e18);
+
+        position = morpho.position(marketParams.id(), address(looper));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(1));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(2));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(3));
+        assertEq(position.collateral, 36_000_000e18);
+        assertTrue(position.borrowShares > 0);
+
+        vm.prank(address(3));
+        looper.closePosition();
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(1)),
+            1_000_000e18,
+            1
+        );
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(2)),
+            1_000_000e18,
+            1
+        );
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(3)),
+            1_000_000e18,
+            1
+        );
+        position = morpho.position(marketParams.id(), address(looper));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(1));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(2));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+
+        position = morpho.position(marketParams.id(), address(3));
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+    }
 }
