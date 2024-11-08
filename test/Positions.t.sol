@@ -9,7 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Position, MarketParams} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 
-contract ReservoirLooperTest is TestSetup {
+contract PositionsTest is TestSetup {
     using MarketParamsLib for MarketParams;
 
     function test_open_position() public {
