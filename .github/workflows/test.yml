@@ -32,7 +32,7 @@ jobs:
         id: build
       - name: Run Forge tests
         run: |
-          cp .env.template .env
+          cp .env.example .env
           forge test -vvv
         id: testrun
 
