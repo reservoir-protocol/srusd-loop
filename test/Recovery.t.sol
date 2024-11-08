@@ -11,7 +11,7 @@ contract MockERC20 is ERC20 {
     constructor() ERC20("Mock ERC20", "MRC") {}
 }
 
-contract ReservoirLooperTest is Test {
+contract RecoveryTest is Test {
     ReservoirLooper public looper;
     ERC20 public testToken;
 
