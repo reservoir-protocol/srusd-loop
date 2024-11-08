@@ -65,6 +65,11 @@ contract ReservoirLooper is IReservoirLooper, AccessControl {
         uint256 _initialAmount,
         uint256 _targetAmount
     ) external onlyRole(WHITELIST) {
+        require(
+            _targetAmount > _initialAmount,
+            ErrorsLib.INVALID_TARGET_AMOUNT
+        );
+
         srUSD.safeTransferFrom(msg.sender, address(this), _initialAmount);
 
         morpho.supplyCollateral(

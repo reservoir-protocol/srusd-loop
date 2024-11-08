@@ -264,4 +264,23 @@ contract ReservoirLooperTest is Test {
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
     }
+
+    function testFuzz_open_invalid_position(
+        uint256 initialAmount,
+        uint256 targetAmount
+    ) public {
+        vm.assume(initialAmount >= 1e18 && initialAmount <= 10_000_000e18);
+        vm.assume(targetAmount <= initialAmount);
+
+        looper.grantRole(looper.WHITELIST(), address(this));
+
+        deal(SRUSD_ADDRESS, address(this), initialAmount, true);
+
+        IERC20(SRUSD_ADDRESS).approve(address(looper), initialAmount);
+
+        morpho.setAuthorization(address(looper), true);
+
+        vm.expectRevert();
+        looper.openPosition(initialAmount, targetAmount);
+    }
 }
