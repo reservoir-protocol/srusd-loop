@@ -7,15 +7,27 @@ import {ReservoirLooper} from "../src/ReservoirLooper.sol";
 // openzeppelin
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+// morpho-blue
+import {IMorpho} from "morpho-blue/src/interfaces/IMorpho.sol";
+
+// libraries
+import "../src/libraries/ConstantsLib.sol";
+
 contract MockERC20 is ERC20 {
     constructor() ERC20("Mock ERC20", "MRC") {}
 }
 
 contract RecoveryTest is Test {
+    IMorpho public morpho = IMorpho(MORPHO_ADDRESS);
+
     ReservoirLooper public looper;
     ERC20 public testToken;
 
+    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
+
     function setUp() external {
+        vm.createSelectFork(MAINNET_RPC_URL);
+
         looper = new ReservoirLooper();
         testToken = new MockERC20();
     }
@@ -116,6 +128,42 @@ contract RecoveryTest is Test {
         vm.prank(user);
         vm.expectRevert();
         looper.recoverETH(payable(this), 1);
+    }
+
+    function testFuzz_set_morpho_authorization(address user) external {
+        assertFalse(morpho.isAuthorized(address(looper), user));
+
+        looper.setMorphoAuthorization(user);
+
+        assertTrue(morpho.isAuthorized(address(looper), user));
+    }
+
+    function testFuzz_remove_morpho_authorization(address user) external {
+        looper.setMorphoAuthorization(user);
+
+        looper.removeMorphoAuthorization(user);
+
+        assertFalse(morpho.isAuthorized(address(this), user));
+    }
+
+    function testFuzz_set_morpho_authorization_unauthorized(
+        address user
+    ) external {
+        vm.assume(user != address(this));
+
+        vm.prank(user);
+        vm.expectRevert();
+        looper.setMorphoAuthorization(address(1));
+    }
+
+    function testFuzz_remove_morpho_authorization_unauthorized(
+        address user
+    ) external {
+        vm.assume(user != address(this));
+
+        vm.prank(user);
+        vm.expectRevert();
+        looper.removeMorphoAuthorization(address(1));
     }
 
     receive() external payable {}

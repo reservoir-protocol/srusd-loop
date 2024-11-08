@@ -157,7 +157,7 @@ contract ReservoirLooper is IReservoirLooper, AccessControl {
     }
 
     /******************************************
-     * FUND RECOVERY FUNCTIONS
+     * RECOVERY FUNCTIONS
      ******************************************/
 
     function recover(
@@ -192,6 +192,18 @@ contract ReservoirLooper is IReservoirLooper, AccessControl {
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         token.approve(to, amount);
+    }
+
+    function setMorphoAuthorization(
+        address to
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        morpho.setAuthorization(to, true);
+    }
+
+    function removeMorphoAuthorization(
+        address to
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        morpho.setAuthorization(to, false);
     }
 
     /******************************************
