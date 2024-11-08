@@ -43,8 +43,8 @@ contract ReservoirLooper is IReservoirLooper, AccessControl {
 
     // --- CONSTRUCTOR --- //
 
-    constructor() {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    constructor(address _admin) {
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(MORPHO_ROLE, MORPHO_ADDRESS);
 
         marketParams.loanToken = RUSD_ADDRESS;

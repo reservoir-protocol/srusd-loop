@@ -47,7 +47,7 @@ contract TestSetup is Test {
 
         savingModule = ISavingModule(SAVINGMODULE_ADDRESS);
 
-        looper = new ReservoirLooper();
+        looper = new ReservoirLooper(address(this));
 
         looper.grantRole(looper.MORPHO_ROLE(), MORPHO_ADDRESS);
 

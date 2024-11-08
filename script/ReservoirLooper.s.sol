@@ -12,7 +12,7 @@ contract ReservoirLooperScript is Script {
     function run() public {
         vm.startBroadcast();
 
-        looper = new ReservoirLooper();
+        looper = new ReservoirLooper(msg.sender);
 
         vm.stopBroadcast();
     }
