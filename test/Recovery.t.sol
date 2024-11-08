@@ -1,37 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
-import {ReservoirLooper} from "../src/ReservoirLooper.sol";
+import {TestSetup} from "./TestSetup.t.sol";
 
-// openzeppelin
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
-// morpho-blue
-import {IMorpho} from "morpho-blue/src/interfaces/IMorpho.sol";
-
-// libraries
-import "../src/libraries/ConstantsLib.sol";
-
-contract MockERC20 is ERC20 {
-    constructor() ERC20("Mock ERC20", "MRC") {}
-}
-
-contract RecoveryTest is Test {
-    IMorpho public morpho = IMorpho(MORPHO_ADDRESS);
-
-    ReservoirLooper public looper;
-    ERC20 public testToken;
-
-    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-
-    function setUp() external {
-        vm.createSelectFork(MAINNET_RPC_URL);
-
-        looper = new ReservoirLooper();
-        testToken = new MockERC20();
-    }
-
+contract RecoveryTest is TestSetup {
     function testFuzz_recover(uint256 _amount, address _to) external {
         vm.assume(_to != address(looper) && _to != address(0));
 

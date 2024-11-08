@@ -1,28 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
-import {ReservoirLooper} from "../src/ReservoirLooper.sol";
+import {TestSetup} from "./TestSetup.t.sol";
 
-// reservoir interfaces
-import {ISavingModule} from "../src/interfaces/ISavingModule.sol";
-
-// libraries
-import "../src/libraries/ConstantsLib.sol";
-
-contract ReservoirLooperTest is Test {
-    ReservoirLooper public looper;
-    ISavingModule public savingModule;
-
-    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-
-    function setUp() external {
-        vm.createSelectFork(MAINNET_RPC_URL);
-
-        looper = new ReservoirLooper();
-        savingModule = ISavingModule(SAVINGMODULE_ADDRESS);
-    }
-
+contract PricePreviewTest is TestSetup {
     function testFuzz_preview_to_srusd(uint256 _rusdAmount) external view {
         vm.assume(_rusdAmount < 1_000_000_000_000e18);
 
