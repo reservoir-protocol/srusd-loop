@@ -57,17 +57,18 @@ contract ReservoirLooperTest is Test {
         IERC20(RUSD_ADDRESS).approve(address(morpho), 1_000_000_000_000e18);
         morpho.supply(marketParams, 1_000_000_000_000e18, 0, address(1), "");
         vm.stopPrank();
+
+        // set up permissions for looper
+        looper.grantRole(looper.WHITELIST(), address(this));
+        IERC20(SRUSD_ADDRESS).approve(address(looper), type(uint256).max);
+        morpho.setAuthorization(address(looper), true);
     }
 
     function test_open_position() public {
         uint256 initialAmount = 1_000e18;
         uint256 targetAmount = 3_000e18;
 
-        looper.grantRole(looper.WHITELIST(), address(this));
-
         deal(SRUSD_ADDRESS, address(this), initialAmount, true);
-
-        IERC20(SRUSD_ADDRESS).approve(address(looper), initialAmount);
 
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(this)), initialAmount);
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
@@ -80,8 +81,6 @@ contract ReservoirLooperTest is Test {
         );
 
         assertEq(position.collateral, 0);
-
-        morpho.setAuthorization(address(looper), true);
 
         vm.expectEmit(true, true, true, true);
         emit EventsLib.OpenPosition(
@@ -110,16 +109,10 @@ contract ReservoirLooperTest is Test {
         uint256 initialAmount = 1_000e18;
         uint256 targetAmount = 3_000e18;
 
-        looper.grantRole(looper.WHITELIST(), address(this));
-
         deal(SRUSD_ADDRESS, address(this), initialAmount, true);
-
-        IERC20(SRUSD_ADDRESS).approve(address(looper), initialAmount);
 
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
-
-        morpho.setAuthorization(address(looper), true);
 
         looper.openPosition(initialAmount, targetAmount);
 
@@ -166,11 +159,7 @@ contract ReservoirLooperTest is Test {
 
         uint256 targetAmount = initialAmount * leverage;
 
-        looper.grantRole(looper.WHITELIST(), address(this));
-
         deal(SRUSD_ADDRESS, address(this), initialAmount, true);
-
-        IERC20(SRUSD_ADDRESS).approve(address(looper), initialAmount);
 
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(this)), initialAmount);
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
@@ -183,8 +172,6 @@ contract ReservoirLooperTest is Test {
         );
 
         assertEq(position.collateral, 0);
-
-        morpho.setAuthorization(address(looper), true);
 
         vm.expectEmit(true, true, true, true);
         emit EventsLib.OpenPosition(
@@ -220,16 +207,10 @@ contract ReservoirLooperTest is Test {
 
         uint256 targetAmount = initialAmount * leverage;
 
-        looper.grantRole(looper.WHITELIST(), address(this));
-
         deal(SRUSD_ADDRESS, address(this), initialAmount, true);
-
-        IERC20(SRUSD_ADDRESS).approve(address(looper), initialAmount);
 
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
-
-        morpho.setAuthorization(address(looper), true);
 
         looper.openPosition(initialAmount, targetAmount);
 
@@ -272,13 +253,7 @@ contract ReservoirLooperTest is Test {
         vm.assume(initialAmount >= 1e18 && initialAmount <= 10_000_000e18);
         vm.assume(targetAmount <= initialAmount);
 
-        looper.grantRole(looper.WHITELIST(), address(this));
-
         deal(SRUSD_ADDRESS, address(this), initialAmount, true);
-
-        IERC20(SRUSD_ADDRESS).approve(address(looper), initialAmount);
-
-        morpho.setAuthorization(address(looper), true);
 
         vm.expectRevert();
         looper.openPosition(initialAmount, targetAmount);
