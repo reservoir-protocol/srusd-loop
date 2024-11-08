@@ -255,7 +255,12 @@ contract ReservoirLooperTest is Test {
 
         deal(SRUSD_ADDRESS, address(this), initialAmount, true);
 
-        vm.expectRevert();
+        vm.expectRevert("invalid target amount");
         looper.openPosition(initialAmount, targetAmount);
+    }
+
+    function test_close_nonexistent_position() public {
+        vm.expectRevert("inconsistent input");
+        looper.closePosition();
     }
 }
