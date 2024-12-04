@@ -4,15 +4,32 @@ pragma solidity 0.8.24;
 import {Script, console} from "forge-std/Script.sol";
 import {ReservoirLooper} from "../src/ReservoirLooper.sol";
 
-contract ReservoirLooperScript is Script {
-    ReservoirLooper public looper;
+import {IMorpho, MarketParams} from "morpho-blue/src/interfaces/IMorpho.sol";
+import "../src/libraries/ConstantsLib.sol";
 
-    function setUp() public {}
+contract ReservoirLooperScript is Script {
+    IMorpho public morpho = IMorpho(MORPHO_ADDRESS);
+
+    MarketParams public marketParams;
+
+    function setUp() public {
+        marketParams.loanToken = RUSD_ADDRESS;
+        marketParams.collateralToken = SRUSD_ADDRESS;
+        marketParams.oracle = ORACLE_ADDRESS;
+        marketParams.irm = IRM_ADDRESS;
+        marketParams.lltv = LLTV;
+    }
 
     function run() public {
         vm.startBroadcast();
 
-        looper = new ReservoirLooper(msg.sender);
+        // morpho.withdraw(
+        //     marketParams,
+        //     0,
+        //     19988133884776223097768766,
+        //     msg.sender,
+        //     msg.sender
+        // );
 
         vm.stopBroadcast();
     }
