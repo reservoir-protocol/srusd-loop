@@ -49,9 +49,9 @@ contract ReservoirLooper is IReservoirLooper, AccessControl {
 
         marketParams.loanToken = RUSD_ADDRESS;
         marketParams.collateralToken = SRUSD_ADDRESS;
-        marketParams.oracle = ORACLE_ADDRESS;
-        marketParams.irm = IRM_ADDRESS;
-        marketParams.lltv = LLTV;
+        marketParams.oracle = SRUSD_RUSD_ORACLE_ADDRESS;
+        marketParams.irm = SRUSD_RUSD_IRM_ADDRESS;
+        marketParams.lltv = SRUSD_RUSD_LLTV;
 
         MARKET_ID = marketParams.id();
     }

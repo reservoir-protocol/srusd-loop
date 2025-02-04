@@ -61,9 +61,9 @@ contract TestSetup is Test {
 
         marketParams.loanToken = RUSD_ADDRESS;
         marketParams.collateralToken = SRUSD_ADDRESS;
-        marketParams.oracle = ORACLE_ADDRESS;
-        marketParams.irm = IRM_ADDRESS;
-        marketParams.lltv = LLTV;
+        marketParams.oracle = SRUSD_RUSD_ORACLE_ADDRESS;
+        marketParams.irm = SRUSD_RUSD_IRM_ADDRESS;
+        marketParams.lltv = SRUSD_RUSD_LLTV;
 
         // provide rusd liquiditiy to the market
         deal(RUSD_ADDRESS, address(1), 1_000_000_000_000e18, true);
