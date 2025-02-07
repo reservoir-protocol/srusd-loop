@@ -7,9 +7,16 @@ interface ICreditEnforcer {
         uint256 amount
     ) external returns (uint256);
 
+    function mintStablecoin(
+        address to,
+        uint256 amount
+    ) external returns (uint256);
+
     // ------ Functions needed for setting up the test environment ------
 
     function setSMDebtMax(uint256 smDebtMax_) external;
+
+    function setPSMDebtMax(uint256 psmDebtMax_) external;
 
     function setAssetRatioMin(uint256 assetRatioMin_) external;
 

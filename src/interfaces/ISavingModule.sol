@@ -6,6 +6,10 @@ interface ISavingModule {
 
     function redeem(uint256 amount) external;
 
+    function redeem(address to, uint256 amount) external;
+
+    function redeemFee() external view returns (uint256);
+
     function previewRedeem(
         uint256 rusdAmount
     ) external view returns (uint256 srusdAmount);
