@@ -2,24 +2,24 @@
 pragma solidity 0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
-import {ReservoirLooper} from "../src/ReservoirLooper.sol";
+import {ReservoirLooper} from "../../src/ReservoirLooper.sol";
 
 // morpho-blue
 import {IMorpho, MarketParams, Id, Position} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 
 // reservoir interfaces
-import {ICreditEnforcer} from "../src/interfaces/ICreditEnforcer.sol";
-import {ISavingModule} from "../src/interfaces/ISavingModule.sol";
+import {ICreditEnforcer} from "../../src/interfaces/ICreditEnforcer.sol";
+import {ISavingModule} from "../../src/interfaces/ISavingModule.sol";
 
 // openzeppelin
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 // libraries
-import "../src/libraries/ConstantsLib.sol";
-import "../src/libraries/EventsLib.sol";
-import "../src/libraries/ErrorsLib.sol";
+import "../../src/libraries/ConstantsLib.sol";
+import "../../src/libraries/EventsLib.sol";
+import "../../src/libraries/ErrorsLib.sol";
 
 contract MockERC20 is ERC20 {
     constructor() ERC20("Mock ERC20", "MRC") {}

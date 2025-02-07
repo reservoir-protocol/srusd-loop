@@ -3,8 +3,8 @@ pragma solidity 0.8.24;
 
 import {TestSetup} from "./TestSetup.t.sol";
 
-import "../src/libraries/ConstantsLib.sol";
-import "../src/libraries/EventsLib.sol";
+import "../../src/libraries/ConstantsLib.sol";
+import "../../src/libraries/EventsLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Position, MarketParams} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
