@@ -144,7 +144,7 @@ contract ReservoirLooperSrusdUsdc is IReservoirLooperSrusdUsdc, AccessControl {
         uint256 srUSDToMint = targetAmount - initialAmount;
 
         // USDC:rUSD is 1:1 in PSM
-        // / 1e12 because rUSD is 18 decimals and USDC is 6 decimals
+        // division by 1e12 because rUSD is 18 decimals and USDC is 6 decimals
         // + 1 because with devision, we lose precision and extra 1 will be enough to mint enough target srUSD
         uint256 usdcToBorrow = getRusdAmountToMintProvidedSrusdAmount(
             srUSDToMint
@@ -176,7 +176,7 @@ contract ReservoirLooperSrusdUsdc is IReservoirLooperSrusdUsdc, AccessControl {
             address(this)
         );
 
-        uint256 usdcToGet = _getUSDC(totalSrUSDAmount);
+        uint256 usdcToGet = _getUsdcFromSrusd(totalSrUSDAmount);
 
         uint256 usdcToSendToUser = usdcToGet - usdcToRepay;
 
@@ -272,7 +272,7 @@ contract ReservoirLooperSrusdUsdc is IReservoirLooperSrusdUsdc, AccessControl {
 
         creditEnforcer.mintStablecoin(address(this), _usdcAmount);
 
-        uint256 rusdAmount = _usdcAmount * 1e12; // 1:1 ratio
+        uint256 rusdAmount = _usdcAmount * 1e12; // 1:1 ratio, only decimal difference
 
         rUSD.approve(SAVINGMODULE_ADDRESS, rusdAmount);
 
@@ -281,7 +281,7 @@ contract ReservoirLooperSrusdUsdc is IReservoirLooperSrusdUsdc, AccessControl {
         creditEnforcer.mintSavingcoin(address(this), rusdAmount);
     }
 
-    function _getUSDC(
+    function _getUsdcFromSrusd(
         uint256 _srusdAmount
     ) internal returns (uint256 _usdcAmount) {
         srUSD.approve(SAVINGMODULE_ADDRESS, _srusdAmount);
