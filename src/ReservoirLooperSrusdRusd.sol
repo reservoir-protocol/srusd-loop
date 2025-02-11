@@ -22,8 +22,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {IMorpho, Market, Position, MarketParams, Id} from "morpho-blue/src/interfaces/IMorpho.sol";
 
-import {console} from "forge-std/Test.sol";
-
 contract ReservoirLooperSrusdRusd is IReservoirLooperSrusdRusd, AccessControl {
     using MarketParamsLib for MarketParams;
     using SafeERC20 for IERC20;
@@ -116,8 +114,6 @@ contract ReservoirLooperSrusdRusd is IReservoirLooperSrusdRusd, AccessControl {
     function closePosition() external onlyRole(WHITELIST) {
         Position memory position = morpho.position(MARKET_ID, msg.sender);
 
-        console.log("srUSD Balance start: ", srUSD.balanceOf(address(this)));
-
         morpho.repay(
             marketParams,
             0,
@@ -125,8 +121,6 @@ contract ReservoirLooperSrusdRusd is IReservoirLooperSrusdRusd, AccessControl {
             msg.sender,
             abi.encode(msg.sender, position.collateral)
         );
-
-        console.log("srUSD Balance end: ", srUSD.balanceOf(address(this)));
 
         emit EventsLib.ClosePosition(msg.sender, block.timestamp);
     }
@@ -169,13 +163,6 @@ contract ReservoirLooperSrusdRusd is IReservoirLooperSrusdRusd, AccessControl {
             (address, uint256)
         );
 
-        console.log("FULL SRUSD AMOUNT: ", srUSDAmount);
-
-        console.log(
-            "srUSD Balance before withdrawing coll: ",
-            srUSD.balanceOf(address(this))
-        );
-
         morpho.withdrawCollateral(
             marketParams,
             srUSDAmount,
@@ -183,39 +170,13 @@ contract ReservoirLooperSrusdRusd is IReservoirLooperSrusdRusd, AccessControl {
             address(this)
         );
 
-        console.log(
-            "srUSD Balance after withdrawing coll: ",
-            srUSD.balanceOf(address(this))
-        );
-
         uint256 rusdToGet = _mintRUSD(srUSDAmount);
-
-        console.log("rusdToGet: ", rusdToGet);
-
-        console.log(
-            "srUSD Balance after minting rUSD: ",
-            srUSD.balanceOf(address(this))
-        );
 
         uint256 rusdToSendToUser = rusdToGet - rusdToRepay;
 
-        console.log("rusdToSendToUser: ", rusdToSendToUser);
-
         uint256 srusdAmountToSend = _mintSrUSD(rusdToSendToUser);
 
-        console.log("srusdAmountToSend: ", srusdAmountToSend);
-
-        console.log(
-            "srUSD Balance after minting srUSDAmountToSend: ",
-            srUSD.balanceOf(address(this))
-        );
-
         srUSD.safeTransfer(user, srusdAmountToSend);
-
-        console.log(
-            "srUSD Balance after transfering to user: ",
-            srUSD.balanceOf(address(this))
-        );
 
         rUSD.approve(MORPHO_ADDRESS, rusdToRepay);
     }
