@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import {IReservoirLooper} from "./interfaces/IReservoirLooper.sol";
+import {IReservoirLooperSrusdUsdc} from "./interfaces/IReservoirLooperSrusdUsdc.sol";
 
 // reservoir interfaces
 import {ICreditEnforcer} from "./interfaces/ICreditEnforcer.sol";
@@ -22,7 +22,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {IMorpho, Market, Position, MarketParams, Id} from "morpho-blue/src/interfaces/IMorpho.sol";
 
-contract ReservoirLooperSrusdUsdc is AccessControl {
+contract ReservoirLooperSrusdUsdc is IReservoirLooperSrusdUsdc, AccessControl {
     using MarketParamsLib for MarketParams;
     using SafeERC20 for IERC20;
     // --- Roles --- //
@@ -62,6 +62,7 @@ contract ReservoirLooperSrusdUsdc is AccessControl {
      * HIGH LEVEL FUNCTIONS
      ******************************************/
 
+    /// @inheritdoc IReservoirLooperSrusdUsdc
     function openPosition(
         uint256 _initialAmount,
         uint256 _targetAmount
@@ -88,19 +89,21 @@ contract ReservoirLooperSrusdUsdc is AccessControl {
         );
     }
 
+    /// @inheritdoc IReservoirLooperSrusdUsdc
     function reducePosition(
         uint256 collateralToWithdraw
-    ) external onlyRole(WHITELIST) {
+    ) external onlyRole(WHITELIST) returns (uint256 sharesToRepay) {
         Position memory position = morpho.position(MARKET_ID, msg.sender);
 
         // always repay the proportionate amount of debt in correlation to the collateral withdrawn
-        uint256 shareToRepay = (collateralToWithdraw * position.borrowShares) /
+        sharesToRepay =
+            (collateralToWithdraw * position.borrowShares) /
             position.collateral;
 
         morpho.repay(
             marketParams,
             0,
-            shareToRepay,
+            sharesToRepay,
             msg.sender,
             abi.encode(msg.sender, collateralToWithdraw)
         );
@@ -108,6 +111,7 @@ contract ReservoirLooperSrusdUsdc is AccessControl {
         emit EventsLib.ClosePosition(msg.sender, block.timestamp);
     }
 
+    /// @inheritdoc IReservoirLooperSrusdUsdc
     function closePosition() external onlyRole(WHITELIST) {
         Position memory position = morpho.position(MARKET_ID, msg.sender);
 
