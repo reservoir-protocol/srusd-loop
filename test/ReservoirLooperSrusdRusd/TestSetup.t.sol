@@ -2,7 +2,7 @@
 pragma solidity 0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
-import {ReservoirLooper} from "../../src/ReservoirLooper.sol";
+import {ReservoirLooperSrusdRusd} from "../../src/ReservoirLooperSrusdRusd.sol";
 
 // morpho-blue
 import {IMorpho, MarketParams, Id, Position} from "morpho-blue/src/interfaces/IMorpho.sol";
@@ -28,7 +28,7 @@ contract MockERC20 is ERC20 {
 contract TestSetup is Test {
     using MarketParamsLib for MarketParams;
 
-    ReservoirLooper public looper;
+    ReservoirLooperSrusdRusd public looper;
 
     IMorpho public morpho = IMorpho(MORPHO_ADDRESS);
 
@@ -47,7 +47,7 @@ contract TestSetup is Test {
 
         savingModule = ISavingModule(SAVINGMODULE_ADDRESS);
 
-        looper = new ReservoirLooper(address(this));
+        looper = new ReservoirLooperSrusdRusd(address(this));
 
         looper.grantRole(looper.MORPHO_ROLE(), MORPHO_ADDRESS);
 

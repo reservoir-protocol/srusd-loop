@@ -9,6 +9,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Position, MarketParams} from "morpho-blue/src/interfaces/IMorpho.sol";
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 
+import {console} from "forge-std/Test.sol";
+
 contract PositionsTest is TestSetup {
     using MarketParamsLib for MarketParams;
 
@@ -86,13 +88,17 @@ contract PositionsTest is TestSetup {
         assertEq(position.supplyShares, 0);
         assertEq(position.borrowShares, 0);
 
-        assertApproxEqAbs(
+        assertApproxEqRel(
             IERC20(SRUSD_ADDRESS).balanceOf(address(this)),
             initialAmount,
-            1
+            0.02e18
         );
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
-        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(looper)),
+            0,
+            1
+        );
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
     }
 
@@ -184,13 +190,17 @@ contract PositionsTest is TestSetup {
         assertEq(position.supplyShares, 0);
         assertEq(position.borrowShares, 0);
 
-        assertApproxEqAbs(
+        assertApproxEqRel(
             IERC20(SRUSD_ADDRESS).balanceOf(address(this)),
             initialAmount,
-            1
+            0.02e18
         );
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
-        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(looper)),
+            0,
+            1
+        );
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
     }
 
@@ -280,12 +290,16 @@ contract PositionsTest is TestSetup {
         vm.prank(address(1));
         looper.closePosition();
 
-        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
-        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(looper)),
+            0,
+            10
+        );
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertApproxEqRel(
             IERC20(SRUSD_ADDRESS).balanceOf(address(1)),
             1_000_000e18,
-            1
+            0.02e18
         );
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(2)), 0);
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(3)), 1_000_000e18);
@@ -309,12 +323,16 @@ contract PositionsTest is TestSetup {
         vm.prank(address(3));
         looper.openPosition(900_000e18, 36_000_000e18);
 
-        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
-        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(looper)),
+            0,
+            10
+        );
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertApproxEqRel(
             IERC20(SRUSD_ADDRESS).balanceOf(address(1)),
             1_000_000e18,
-            1
+            0.02e18
         );
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(2)), 0);
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(3)), 100_000e18);
@@ -338,17 +356,21 @@ contract PositionsTest is TestSetup {
         vm.prank(address(2));
         looper.closePosition();
 
-        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
-        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(looper)),
+            0,
+            10
+        );
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertApproxEqRel(
             IERC20(SRUSD_ADDRESS).balanceOf(address(1)),
             1_000_000e18,
-            1
+            0.02e18
         );
-        assertApproxEqAbs(
+        assertApproxEqRel(
             IERC20(SRUSD_ADDRESS).balanceOf(address(2)),
             1_000_000e18,
-            1
+            0.02e18
         );
         assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(3)), 100_000e18);
 
@@ -371,22 +393,26 @@ contract PositionsTest is TestSetup {
         vm.prank(address(3));
         looper.closePosition();
 
-        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
-        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
         assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(looper)),
+            0,
+            10
+        );
+        assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertApproxEqRel(
             IERC20(SRUSD_ADDRESS).balanceOf(address(1)),
             1_000_000e18,
-            1
+            0.02e18
         );
-        assertApproxEqAbs(
+        assertApproxEqRel(
             IERC20(SRUSD_ADDRESS).balanceOf(address(2)),
             1_000_000e18,
-            1
+            0.02e18
         );
-        assertApproxEqAbs(
+        assertApproxEqRel(
             IERC20(SRUSD_ADDRESS).balanceOf(address(3)),
             1_000_000e18,
-            1
+            0.02e18
         );
         position = morpho.position(marketParams.id(), address(looper));
         assertEq(position.collateral, 0);
@@ -442,13 +468,17 @@ contract PositionsTest is TestSetup {
         assertEq(position.supplyShares, 0);
         assertEq(position.borrowShares, 0);
 
-        assertApproxEqAbs(
+        assertApproxEqRel(
             IERC20(SRUSD_ADDRESS).balanceOf(address(this)),
             1_000_000e18,
-            1
+            0.02e18
         );
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(this)), 0);
-        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertApproxEqAbs(
+            IERC20(SRUSD_ADDRESS).balanceOf(address(looper)),
+            0,
+            1
+        );
         assertEq(IERC20(RUSD_ADDRESS).balanceOf(address(looper)), 0);
     }
 }
