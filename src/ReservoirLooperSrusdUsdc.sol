@@ -22,8 +22,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 import {IMorpho, Market, Position, MarketParams, Id} from "morpho-blue/src/interfaces/IMorpho.sol";
 
-import {console} from "forge-std/Test.sol";
-
 contract ReservoirLooperSrusdUsdc is AccessControl {
     using MarketParamsLib for MarketParams;
     using SafeERC20 for IERC20;
@@ -90,6 +88,26 @@ contract ReservoirLooperSrusdUsdc is AccessControl {
         );
     }
 
+    function reducePosition(
+        uint256 collateralToWithdraw
+    ) external onlyRole(WHITELIST) {
+        Position memory position = morpho.position(MARKET_ID, msg.sender);
+
+        // always repay the proportionate amount of debt in correlation to the collateral withdrawn
+        uint256 shareToRepay = (collateralToWithdraw * position.borrowShares) /
+            position.collateral;
+
+        morpho.repay(
+            marketParams,
+            0,
+            shareToRepay,
+            msg.sender,
+            abi.encode(msg.sender, collateralToWithdraw)
+        );
+
+        emit EventsLib.ClosePosition(msg.sender, block.timestamp);
+    }
+
     function closePosition() external onlyRole(WHITELIST) {
         Position memory position = morpho.position(MARKET_ID, msg.sender);
 
@@ -130,17 +148,11 @@ contract ReservoirLooperSrusdUsdc is AccessControl {
             1e12 +
             1;
 
-        console.log("usdcToBorrow", usdcToBorrow);
-
         morpho.borrow(marketParams, usdcToBorrow, 0, user, address(this));
 
         _mintSrUSDFromUsdc(usdcToBorrow);
 
         srUSD.approve(address(morpho), targetAmount);
-
-        console.log("end of onMorphoSupplyCollateral");
-        console.log("targetAmount", targetAmount);
-        console.log("balance: ", srUSD.balanceOf(address(this)));
     }
 
     /// @dev Callback function for Morpho's `repay`

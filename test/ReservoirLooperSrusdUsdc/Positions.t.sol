@@ -472,4 +472,84 @@ contract ReservoirLooperSrusdUsdcFlowTest is ReservoirLooperSrusdUsdcTestSetup {
         assertTrue(IERC20(RUSD_ADDRESS).balanceOf(address(looper)) < 1e18); // dust amount
         assertEq(IERC20(USDC_ADDRESS).balanceOf(address(looper)), 0);
     }
+
+    function test_reduce_position() public {
+        uint256 initialAmount = 10_000e18;
+        uint256 targetAmount = 30_000e18;
+        uint256 collateralToWithdraw = 20_000e18;
+
+        deal(SRUSD_ADDRESS, address(this), initialAmount, true);
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(USDC_ADDRESS).balanceOf(address(looper)), 0);
+
+        looper.openPosition(initialAmount, targetAmount);
+
+        assertTrue(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)) < 1e18); // dust amount
+        assertEq(IERC20(USDC_ADDRESS).balanceOf(address(looper)), 0);
+
+        looper.reducePosition(collateralToWithdraw);
+
+        Position memory position = morpho.position(
+            marketParams.id(),
+            address(this)
+        );
+
+        assertEq(position.collateral, targetAmount - collateralToWithdraw);
+    }
+
+    function testFuzz_reduce_position(
+        uint256 initialAmount,
+        uint8 leverage,
+        uint256 collateralToWithdraw
+    ) public {
+        vm.assume(initialAmount >= 1e18 && initialAmount <= 10_000_000e18);
+        vm.assume(leverage > 1 && leverage < 12);
+
+        initialAmount = (initialAmount / 1e18) * 1e18;
+        uint256 targetAmount = initialAmount * leverage;
+
+        deal(SRUSD_ADDRESS, address(this), initialAmount, true);
+
+        looper.openPosition(initialAmount, targetAmount);
+
+        collateralToWithdraw = bound(collateralToWithdraw, 1e18, targetAmount);
+
+        collateralToWithdraw = (collateralToWithdraw / 1e18) * 1e18;
+
+        looper.reducePosition(collateralToWithdraw);
+
+        Position memory position = morpho.position(
+            marketParams.id(),
+            address(this)
+        );
+
+        assertEq(position.collateral, targetAmount - collateralToWithdraw);
+    }
+
+    function testFuzz_reduce_all_position(
+        uint256 initialAmount,
+        uint8 leverage
+    ) public {
+        vm.assume(initialAmount >= 1e18 && initialAmount <= 10_000_000e18);
+        vm.assume(leverage > 1 && leverage < 12);
+
+        initialAmount = (initialAmount / 1e18) * 1e18;
+        uint256 targetAmount = initialAmount * leverage;
+        uint256 collateralToWithdraw = targetAmount;
+
+        deal(SRUSD_ADDRESS, address(this), initialAmount, true);
+
+        looper.openPosition(initialAmount, targetAmount);
+
+        looper.reducePosition(collateralToWithdraw);
+
+        Position memory position = morpho.position(
+            marketParams.id(),
+            address(this)
+        );
+
+        assertEq(position.collateral, 0);
+        assertEq(position.borrowShares, 0);
+    }
 }
