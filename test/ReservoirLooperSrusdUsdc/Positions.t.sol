@@ -552,4 +552,32 @@ contract ReservoirLooperSrusdUsdcFlowTest is ReservoirLooperSrusdUsdcTestSetup {
         assertEq(position.collateral, 0);
         assertEq(position.borrowShares, 0);
     }
+
+    function test_reduce_position_multiple() public {
+        uint256 initialAmount = 10_000e18;
+        uint256 targetAmount = 30_000e18;
+        uint256 collateralToWithdraw = 5_000e18;
+
+        deal(SRUSD_ADDRESS, address(this), initialAmount, true);
+
+        assertEq(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)), 0);
+        assertEq(IERC20(USDC_ADDRESS).balanceOf(address(looper)), 0);
+
+        looper.openPosition(initialAmount, targetAmount);
+
+        assertTrue(IERC20(SRUSD_ADDRESS).balanceOf(address(looper)) < 1e18); // dust amount
+        assertEq(IERC20(USDC_ADDRESS).balanceOf(address(looper)), 0);
+
+        looper.reducePosition(collateralToWithdraw);
+        looper.reducePosition(collateralToWithdraw);
+        looper.reducePosition(collateralToWithdraw);
+        looper.reducePosition(collateralToWithdraw);
+
+        Position memory position = morpho.position(
+            marketParams.id(),
+            address(this)
+        );
+
+        assertEq(position.collateral, targetAmount - collateralToWithdraw * 4);
+    }
 }
